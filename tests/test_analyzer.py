@@ -198,3 +198,17 @@ def test_cli_rejects_invalid_url(capsys):
     exit_code = cli.main(["--url", "ftp://example.com"])
     assert exit_code == 2
     assert "only http" in capsys.readouterr().err
+
+
+def test_cli_help_is_localized_in_french(capsys):
+    import main as cli
+
+    with pytest.raises(SystemExit) as exit_info:
+        cli.main(["--help", "--lang", "fr"])
+    output = capsys.readouterr().out
+
+    assert exit_info.value.code == 0
+    assert "usage :" in output
+    assert "options :" in output
+    assert "affiche ce message d'aide et quitte" in output
+    assert "URL du site web à analyser" in output

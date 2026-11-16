@@ -22,6 +22,19 @@ WIDTH = 58
 THICK_RULE = "=" * WIDTH
 THIN_RULE = "-" * WIDTH
 
+# argparse emits a few built-in strings ("usage:", "options:", ...) through the
+# gettext hook below so the whole help screen can be localized.
+ARGPARSE_BOILERPLATE = {
+    "en": {},
+    "fr": {
+        "usage: ": "usage : ",
+        "%(heading)s:": "%(heading)s :",
+        "options": "options",
+        "positional arguments": "arguments positionnels",
+        "show this help message and exit": "affiche ce message d'aide et quitte",
+    },
+}
+
 
 def _detect_language(argv: list[str]) -> str:
     """Read --lang before argparse runs, so the help text is localized too."""
@@ -36,11 +49,15 @@ def _detect_language(argv: list[str]) -> str:
 
 
 def build_parser(lang: str) -> argparse.ArgumentParser:
+    import argparse as argparse_module
+
+    table = ARGPARSE_BOILERPLATE.get(lang, {})
+    argparse_module._ = lambda text: table.get(text, text)
+
     t = Translator(lang)
     parser = argparse.ArgumentParser(
         prog="rankpilot",
         description=t.t("help_description"),
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("--url", help=t.t("help_url"))
     parser.add_argument("--lang", choices=SUPPORTED_LANGUAGES, default=DEFAULT_LANGUAGE,
