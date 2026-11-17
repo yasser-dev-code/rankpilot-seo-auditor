@@ -1,260 +1,222 @@
 # RankPilot — Website SEO Auditor
 
-**French documentation: [README_FR.md](README_FR.md)**
+**Français : [README_FR.md](README_FR.md)**
 
-RankPilot is a bilingual (English / French) Python command-line application that
-analyzes a website for common SEO problems, displays a clean professional report
-in the terminal, and generates a CSV report for every analysis.
+RankPilot is a bilingual (English / French) Python SEO auditing platform. It analyzes a website's on-page SEO through seven concrete checks and presents the results through **two interfaces built on the same analysis engine**:
 
-Give RankPilot a URL and it downloads the page, runs seven SEO checks, verifies
-the internal links, looks for a sitemap and a `robots.txt` file, and tells you
-exactly what to fix.
+1. A **command-line interface** for fast, scriptable audits with CSV reports.
+2. A **Django web application** with a dashboard, an analyzer page, detailed result pages, report history and CSV downloads.
+
+The RankPilot score is an internal quality indicator computed from the checks below. It is **not** an official Google score and does not predict Google rankings.
 
 ---
 
-## Project purpose
+## Features
 
-Small and medium websites frequently ship without a meta description, without
-alt attributes on images, or with broken internal links — problems that hurt
-their search engine rankings. RankPilot makes these problems visible in seconds,
-from a single terminal command, without any setup beyond Python and two
-lightweight libraries.
+- **Seven SEO checks** on any public `http://` / `https://` URL:
+  1. Page title
+  2. Meta description
+  3. H1 heading
+  4. Image alt attributes (missing vs. intentionally empty alt text are distinguished)
+  5. Broken internal links (HEAD requests with GET fallback, redirect handling, duplicate-link detection, fragment removal, `mailto:`/`tel:`/`javascript:`/`data:` exclusion, bounded link count)
+  6. Sitemap availability (robots.txt declarations and `/sitemap.xml`)
+  7. robots.txt availability
+- **Transparent SEO score out of 100** computed from the actual check results.
+- **Bilingual everywhere**: the CLI (`--lang en` / `--lang fr`) and the complete web interface (navigation, forms, results, reports, errors, empty states) with a session-persisted language switch.
+- **CSV reports** written to `reports/` by the CLI and downloadable per analysis from the web interface (UTF-8 with BOM for Excel compatibility).
+- **Analysis history** stored in SQLite through the Django ORM, surviving restarts.
+- **Dashboard statistics** computed from stored analyses only (websites analyzed, average score, issues detected, successful analyses).
+- **SSRF-hardened fetching**: private, loopback, link-local and reserved addresses are rejected, DNS results are validated before connecting, every redirect hop is re-validated, and responses are size-capped and time-limited.
+- **Professional responsive web UI**: navy/blue design system, sidebar navigation, statistic cards, circular score visualization and a Chart.js outcome chart.
+- **Test suite**: 81 automated tests (56 for the SEO engine and CLI, 25 for the Django application), all running offline with mocked HTTP.
 
-## Main features
+## Technologies
 
-- **Seven SEO checks** on the analyzed page:
-  1. **Page Title** — present and non-empty.
-  2. **Meta Description** — present and non-empty.
-  3. **H1 Heading** — at least one H1 (multiple H1s raise a warning).
-  4. **Image Alt Attributes** — missing `alt` fails; empty `alt` only warns,
-     because it can be intentional for decorative images.
-  5. **Broken Internal Links** — internal links are resolved, deduplicated and
-     checked over HTTP (HEAD first, GET fallback). Broken URLs are listed with
-     their HTTP status or error.
-  6. **Sitemap** — declared in `robots.txt` or available at `/sitemap.xml`.
-  7. **Robots.txt** — present at the website root.
-- **Fully bilingual interface** — `--lang en` (default) and `--lang fr`,
-  including terminal output, error messages, command-line help and CSV reports.
-- **CSV reports** — one report per analysis in `reports/`, named after the
-  website and a timestamp, written as UTF-8 with BOM so French text opens
-  correctly in Microsoft Excel. Broken links appear as identifiable rows.
-- **Professional terminal output** — PASS / FAIL / WARN statuses, per-check
-  details, a summary of issues and the report location.
-- **Interactive mode** — start RankPilot without `--url` and it asks for the URL.
-- **Robust input handling** — URL validation (HTTPS assumed when no scheme is
-  given, only HTTP/HTTPS accepted), request timeouts, and graceful handling of
-  inaccessible websites, timeouts and malformed HTML.
+| Layer     | Technology                                                    |
+|-----------|---------------------------------------------------------------|
+| Language  | Python 3.11+ (developed and tested on Python 3.14)            |
+| Web frame | Django 5.2+ (tested on Django 6.1), Django templates          |
+| HTTP      | `requests`, `beautifulsoup4`                                  |
+| Database  | SQLite via the Django ORM (`JSONField` for structured results)|
+| Frontend  | HTML5, CSS3, vanilla JavaScript, Chart.js (results chart)     |
+| Testing   | `pytest`, `pytest-django`                                     |
 
-## Technologies used
-
-| Technology      | Role                          |
-|-----------------|-------------------------------|
-| Python 3        | Application language          |
-| Requests        | HTTP requests                 |
-| BeautifulSoup4  | HTML parsing                  |
-| csv (stdlib)    | CSV report generation         |
-| Pytest          | Automated testing             |
+No Flask, no Node.js, no MongoDB, no paid APIs.
 
 ## Screenshots
 
-### English terminal analysis
+### Web interface
 
-![RankPilot English terminal analysis](docs/screenshots/rankpilot-english.png)
+| Dashboard (English) | Dashboard (French) |
+|---|---|
+| ![Dashboard EN](docs/screenshots/rankpilot-dashboard-en.png) | ![Dashboard FR](docs/screenshots/rankpilot-dashboard-fr.png) |
 
-### French terminal analysis
+| Analyzer | Results |
+|---|---|
+| ![Analyzer](docs/screenshots/rankpilot-analyzer.png) | ![Results](docs/screenshots/rankpilot-results.png) |
 
-![RankPilot French terminal analysis](docs/screenshots/rankpilot-french.png)
+| Reports |
+|---|
+| ![Reports](docs/screenshots/rankpilot-reports.png) |
 
-### CSV report
+### Command-line interface
 
-![RankPilot CSV report](docs/screenshots/rankpilot-csv-report.png)
+| English output | French output |
+|---|---|
+| ![CLI English](docs/screenshots/rankpilot-english.png) | ![CLI French](docs/screenshots/rankpilot-french.png) |
 
-## Installation
+| CSV report |
+|---|
+| ![CSV report](docs/screenshots/rankpilot-csv-report.png) |
 
-Requirements: Python 3.9 or newer and Git.
+## Installation (Windows / PowerShell)
 
-```bash
+Requirements: Python 3.11 or newer and Git.
+
+```powershell
+# 1. Clone the repository
 git clone https://github.com/yasser-dev-code/rankpilot-seo-auditor.git
 cd rankpilot-seo-auditor
 
+# 2. Create and activate a virtual environment
 python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# macOS / Linux:
-source .venv/bin/activate
+.\.venv\Scripts\Activate.ps1
 
+# 3. Install the dependencies
 pip install -r requirements.txt
+
+# 4. Create the SQLite database used by the web application
+python web/manage.py migrate
+
+# 5. Start the Django development server
+python web/manage.py runserver
 ```
 
-## How to run
+Then open <http://127.0.0.1:8000/> in your browser.
 
-Analyze a website in English (default):
+> If PowerShell blocks script execution, run
+> `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned` once, or activate the
+> environment with `.venv\Scripts\activate.bat` from `cmd.exe`.
 
-```bash
+## Using the web interface
+
+1. **Dashboard** (`/`) — overview statistics and the most recent analyses, or a guided empty state when no analysis exists yet.
+2. **Analyze Website** (`/analyze/`) — enter a full `http://` or `https://` URL and submit. The existing Python SEO engine runs the audit, the result is stored, and you are redirected to the results page.
+3. **Results** (`/results/<id>/`) — score ring out of 100, passed/failed/warning counters, detected page title, meta description and H1, one card per check with its status and explanation, a broken-links table and a **Download CSV report** button.
+4. **Reports** (`/reports/`) — paginated history of every analysis with date, score, status, a link to the full results and a CSV download.
+5. **Language switch** — the button in the top bar toggles English ⇄ French for the whole session; stored analyses are re-rendered in the active language.
+6. **About RankPilot** (`/about/`) — scoring rules, security notes and version information.
+
+## Using the CLI
+
+```powershell
+# One-shot audit (English)
 python main.py --url https://example.com --lang en
-```
 
-Analyze a website in French:
-
-```bash
+# One-shot audit (French)
 python main.py --url https://example.com --lang fr
-```
 
-Show the localized command-line help:
-
-```bash
-python main.py --help
-```
-
-Start in interactive mode (RankPilot asks for the URL):
-
-```bash
+# Interactive mode: prompts for the URL and language
 python main.py
 ```
 
-Useful options:
+Each run prints a formatted bilingual report to the terminal and writes a CSV report to `reports/seo-report-<domain>-<timestamp>.csv`.
 
-| Option          | Description                                        | Default   |
-|-----------------|----------------------------------------------------|-----------|
-| `--url`         | Website URL to analyze                             | *(interactive mode)* |
-| `--lang`        | Interface language: `en` or `fr`                   | `en`      |
-| `--timeout`     | Request timeout in seconds                         | `10`      |
-| `--reports-dir` | Directory where CSV reports are saved              | `reports` |
+## SEO scoring methodology
 
-### Example terminal result
+Every audit runs the seven checks listed above. Each counted check contributes to the score:
 
-Real output of `python main.py --url https://quotes.toscrape.com --lang en`:
+| Status | Points |
+|--------|--------|
+| PASS   | 1.0    |
+| WARN   | 0.5    |
+| FAIL   | 0.0    |
 
-```text
-==========================================================
- RANKPILOT — WEBSITE SEO AUDITOR
-==========================================================
+`score = round(100 × earned points ÷ 7)`
 
-Website:       https://quotes.toscrape.com
-Analysis date: 2026-11-16 23:11:50
-HTTP status:   200
-
-----------------------------------------------------------
- SEO ANALYSIS RESULTS
-----------------------------------------------------------
-
-Page Title:           PASS
-  Title found: "Quotes to Scrape"
-
-Meta Description:     FAIL
-  No meta description found.
-
-H1 Heading:           PASS
-  H1 heading found: "Quotes to Scrape"
-
-Image Alt Attributes: PASS
-  No images found on the page.
-
-Internal Links:       PASS
-  25 internal link(s) checked, none broken. Only the first 25 unique internal links were checked.
-
-Sitemap:              WARN
-  No sitemap found (checked robots.txt declarations and /sitemap.xml).
-
-Robots.txt:           WARN
-  No robots.txt file found at the website root.
-
-----------------------------------------------------------
- SUMMARY
-----------------------------------------------------------
-
-Checks Passed: 4
-Checks Failed: 1
-Warnings:      2
-
-Issues Found: 3
-
-CSV Report: reports\seo-report-quotes.toscrape.com-20261116-231150.csv
-```
+A check is a **WARN** when the situation is recoverable or informational (for example a missing sitemap or robots.txt, or many images without alt text) and a **FAIL** when an expected element is absent or broken. The page-load line shown in reports is informational and is not counted. The score is a transparent internal indicator of the checks RankPilot performed — it is not an official Google score and makes no ranking prediction.
 
 ## CSV reports
 
-Every successful analysis writes a CSV report into `reports/`, for example
-`reports/seo-report-quotes.toscrape.com-20261116-231150.csv`.
-
-The report contains one row per check, plus one identifiable row per broken
-internal link, with these columns:
-
-| Column        | Content                                            |
-|---------------|----------------------------------------------------|
-| Website       | The analyzed URL                                   |
-| Analysis date | Date and time of the analysis                      |
-| Check         | Check name (localized)                             |
-| Status        | PASS / FAIL / WARN (localized: RÉUSSI / ÉCHEC / ALERTE) |
-| Details       | Human-readable explanation of the result           |
-| Related URL   | The URL concerned, where applicable (broken links) |
-| HTTP status   | The HTTP status code, where applicable             |
-
-Reports are encoded as UTF-8 with BOM, so accented French text displays
-correctly when opened in Microsoft Excel. Generated reports are ignored by Git.
+- Written by the CLI to `reports/` and downloadable from every successful web analysis.
+- Encoded as **UTF-8 with BOM** so Excel opens accented French text correctly.
+- One row per check with status and details, plus one row per broken internal link (URL, HTTP status, error), so broken links are individually identifiable in spreadsheet tools.
 
 ## Project structure
 
-```text
+```
 rankpilot-seo-auditor/
-│
-├── rankpilot/
-│   ├── __init__.py        # Package metadata and version
-│   ├── analyzer.py        # Orchestrates the download and the seven checks
-│   ├── checks.py          # Individual SEO checks (title, meta, H1, images, ...)
-│   ├── link_checker.py    # Internal link extraction and HTTP verification
-│   ├── reporter.py        # CSV report generation (UTF-8 with BOM)
-│   ├── i18n.py            # English and French translations
-│   └── utils.py           # URL validation and HTTP helpers
-│
-├── tests/
-│   ├── test_analyzer.py   # End-to-end audits with mocked HTTP + CLI output
-│   ├── test_checks.py     # The seven SEO checks
-│   ├── test_link_checker.py # Link extraction and broken-link detection
-│   ├── test_reporter.py   # CSV validity, BOM and broken-link rows
-│   └── test_utils.py      # URL validation
-│
-├── reports/               # Generated CSV reports (not committed)
-├── docs/
-│   └── screenshots/       # Terminal and CSV screenshots
-│
-├── main.py                # Command-line entry point
+├── main.py                  # CLI entry point (python main.py --url ... --lang ...)
+├── rankpilot/               # Shared SEO engine used by CLI and web app
+│   ├── analyzer.py          # Orchestrates the seven checks
+│   ├── checks.py            # Individual check implementations + CheckResult
+│   ├── link_checker.py      # Internal link extraction and broken-link probing
+│   ├── reporter.py          # Terminal report + CSV rows/writer
+│   ├── i18n.py              # Engine translation catalogue (en/fr)
+│   └── utils.py             # URL normalization/validation helpers
+├── web/                     # Django project
+│   ├── manage.py
+│   ├── config/              # Settings, root URLconf, WSGI/ASGI
+│   ├── auditor/             # Django app: models, views, services, security, translations
+│   │   ├── models.py        # Analysis model (SQLite + JSONField)
+│   │   ├── services.py      # Bridges the web app to the shared engine, scoring
+│   │   ├── security.py      # SSRF-safe session and public-URL validation
+│   │   └── translations.py  # Web UI translation catalogue (en/fr)
+│   ├── templates/           # base, dashboard, analyzer, results, reports, about
+│   └── static/              # CSS design system + JavaScript
+├── tests/                   # 56 engine/CLI tests + 25 Django tests
+├── docs/screenshots/        # CLI and web screenshots
+├── reports/                 # Generated CSV reports (gitignored)
 ├── requirements.txt
-├── .gitignore
+├── pytest.ini
 ├── README.md
 └── README_FR.md
 ```
 
-## Automated testing
+## Testing
 
-The test suite uses Pytest with mocked HTTP responses, so it runs without
-internet access:
+All tests run offline; external HTTP traffic is mocked.
 
-```bash
-pytest tests/ -v
+```powershell
+# Full suite (engine + CLI + Django)
+pytest
+
+# Django system checks
+python web/manage.py check
+
+# Migration consistency
+python web/manage.py makemigrations --check --dry-run
+python web/manage.py migrate
 ```
 
-55 tests cover the seven checks, internal-link identification and broken-link
-detection, sitemap and robots.txt detection, CSV report generation (including
-the UTF-8 BOM), URL validation, and both English and French terminal output.
+Current status: **81 tests passing** (56 engine/CLI, 25 Django), `manage.py check` clean, no pending migrations.
+
+## Security considerations
+
+- Only `http` and `https` URLs are accepted; anything else is rejected before any request is made.
+- Hostnames are resolved with `socket.getaddrinfo` and every resolved address must be a global public IP — loopback, private, link-local and reserved ranges (including cloud metadata endpoints) are blocked, which prevents SSRF through the auditor.
+- The custom `SSRFSafeSession` re-validates **every** request, including each redirect hop, so a public site cannot redirect RankPilot onto an internal service.
+- Requests carry timeouts and responses are streamed with a 5 MiB hard cap.
+- Internal link checking is bounded (first 25 unique internal links) to keep audits polite and fast.
+- Django CSRF protection is enabled on all POST forms; templates escape all output; CSV downloads are generated in memory with safe filenames.
+- The development server binds to localhost only. The bundled settings are for development; a real deployment needs production settings (`DEBUG=False`, a secret key from the environment, TLS, hardened `ALLOWED_HOSTS`).
 
 ## Current limitations
 
-- One page is analyzed per execution (by design for version 1).
-- Internal link checking is capped at the first 25 unique links per page to
-  stay fast and polite to the target website.
-- Only static HTML is analyzed; content rendered by JavaScript is not seen.
-- Checks are limited to the seven implemented SEO rules.
+- Analyses run synchronously inside the request/response cycle, so very large sites can make the analyzer page wait.
+- Only the landing page of a website is audited (plus its internal links for availability).
+- JavaScript-rendered content is not executed; only the served HTML is parsed.
+- SQLite is intended for local use, not concurrent production traffic.
+- The web interface has no authentication; it is a single-user local tool.
 
-## Possible future improvements
+## Future improvements
 
-- Crawl up to ten pages per execution with the existing architecture.
-- Additional checks: canonical URL, Open Graph tags, heading hierarchy,
-  page weight and response time.
-- HTML or JSON report formats in addition to CSV.
-- Configuration file for per-site thresholds and ignored URLs.
+- Background task queue (e.g. Celery or Django management commands) for long audits.
+- Multi-page crawls with per-page scores and site-wide summaries.
+- User accounts with private analysis history.
+- PDF export and scheduled re-audits with score trend charts.
+- Additional checks (Open Graph tags, canonical URLs, hreflang, page weight).
 
 ---
 
-RankPilot is a portfolio project built to demonstrate clean, tested,
-well-documented Python engineering.
+RankPilot — portfolio project by Yasser · Built with Python, Django and care.

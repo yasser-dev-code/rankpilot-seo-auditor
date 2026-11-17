@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ t.about_title }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h1>{{ t.about_title }}</h1>
+  </div>
+
+  <div class="card" style="max-width: 860px;">
+    <p class="check-details">{{ t.about_text }}</p>
+  </div>
+
+  <div class="card" style="max-width: 860px;">
+    <h2 class="card-title">{{ t.about_scoring_title }}</h2>
+    <p class="check-details">{{ t.about_scoring }}</p>
+  </div>
+
+  <div class="card" style="max-width: 860px;">
+    <h2 class="card-title">{{ t.about_security_title }}</h2>
+    <p class="check-details">{{ t.about_security }}</p>
+  </div>
+{% endblock %}

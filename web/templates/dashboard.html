@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ t.dash_title }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h1>{{ t.dash_title }}</h1>
+    <p>{{ t.dash_subtitle }}</p>
+  </div>
+
+  {% if stats.sites == 0 %}
+    <div class="empty">
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
+      </div>
+      <h2>{{ t.empty_title }}</h2>
+      <p>{{ t.empty_text }}</p>
+      <a class="btn" href="{% url 'analyzer' %}">{{ t.btn_analyze }}</a>
+    </div>
+  {% else %}
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm7.93 9h-3.02a15.7 15.7 0 0 0-1.12-5.36A8.03 8.03 0 0 1 19.93 11zM12 4.04c.83 1.2 1.64 3.11 1.9 6.96h-3.8c.26-3.85 1.07-5.76 1.9-6.96zM4.07 13h3.02a15.7 15.7 0 0 0 1.12 5.36A8.03 8.03 0 0 1 4.07 13z"/></svg></div>
+        <span class="stat-label">{{ t.stat_sites }}</span>
+        <span class="stat-value">{{ stats.sites }}</span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.26L21.5 9.3l-4.75 4.4 1.15 6.8L12 17.3l-5.9 3.2 1.15-6.8L2.5 9.3l6.6-1.04L12 2z"/></svg></div>
+        <span class="stat-label">{{ t.stat_score }}</span>
+        <span class="stat-value">{% if stats.average_score is not None %}{{ stats.average_score }} / 100{% else %}—{% endif %}</span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></div>
+        <span class="stat-label">{{ t.stat_issues }}</span>
+        <span class="stat-value">{{ stats.issues }}</span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></div>
+        <span class="stat-label">{{ t.stat_success }}</span>
+        <span class="stat-value">{{ stats.successful }}</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">{{ t.recent_title }}</h2>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>{{ t.col_website }}</th>
+              <th>{{ t.col_date }}</th>
+              <th>{{ t.col_score }}</th>
+              <th>{{ t.col_status }}</th>
+              <th>{{ t.col_actions }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for analysis in recent %}
+              <tr>
+                <td class="mono">{{ analysis.domain }}</td>
+                <td>{{ analysis.created_at|date:"Y-m-d H:i" }}</td>
+                <td>{% if analysis.score is not None %}{{ analysis.score }} / 100{% else %}—{% endif %}</td>
+                <td>
+                  {% if analysis.succeeded %}
+                    <span class="badge badge-pass">{{ t.rep_success }}</span>
+                  {% else %}
+                    <span class="badge badge-fail">{{ t.rep_error }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a class="btn btn-secondary" href="{% url 'results' analysis.pk %}">{{ t.action_view }}</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

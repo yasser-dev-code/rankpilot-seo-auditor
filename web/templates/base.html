@@ -1,0 +1,71 @@
+{% load static %}<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RankPilot — {{ t.brand_tagline }}</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="brand-mark">R</span>
+      <div>
+        <div class="brand-name">RankPilot</div>
+        <div class="brand-tag">{{ t.brand_tagline }}</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a class="nav-item {% if active == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        {{ t.nav_dashboard }}
+      </a>
+      <a class="nav-item {% if active == 'analyzer' %}active{% endif %}" href="{% url 'analyzer' %}">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
+        {{ t.nav_analyze }}
+      </a>
+      <a class="nav-item {% if active == 'reports' %}active{% endif %}" href="{% url 'reports' %}">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+        {{ t.nav_reports }}
+      </a>
+      <a class="nav-item {% if active == 'about' %}active{% endif %}" href="{% url 'about' %}">
+        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+        {{ t.nav_about }}
+      </a>
+    </nav>
+    <div class="sidebar-foot">RankPilot · SEO Engine v1.0</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-toggle" id="menuToggle" type="button" aria-label="Menu">
+        <svg viewBox="0 0 24 24"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg>
+      </button>
+      <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+      <a class="lang-switch" href="{% url 'set_language' %}?lang={{ other_lang }}&amp;next={{ request.get_full_path|urlencode }}">
+        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm7.93 9h-3.02a15.7 15.7 0 0 0-1.12-5.36A8.03 8.03 0 0 1 19.93 11zM12 4.04c.83 1.2 1.64 3.11 1.9 6.96h-3.8c.26-3.85 1.07-5.76 1.9-6.96zM4.07 13h3.02a15.7 15.7 0 0 0 1.12 5.36A8.03 8.03 0 0 1 4.07 13zm3.02-2H4.07a8.03 8.03 0 0 1 4.14-5.36A15.7 15.7 0 0 0 7.09 11zM12 19.96c-.83-1.2-1.64-3.11-1.9-6.96h3.8c-.26 3.85-1.07 5.76-1.9 6.96zm5.79-1.6a15.7 15.7 0 0 0 1.12-5.36h3.02a8.03 8.03 0 0 1-4.14 5.36z"/></svg>
+        {{ other_lang_label }}
+      </a>
+    </header>
+
+    {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+          <div class="msg msg-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">{{ t.footer_text }}</footer>
+  </div>
+</div>
+{% block scripts %}{% endblock %}
+<script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>

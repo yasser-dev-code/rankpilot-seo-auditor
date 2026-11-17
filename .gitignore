@@ -18,6 +18,9 @@ env/
 # Generated CSV reports (may contain audited-site data; never commit them)
 reports/*.csv
 
+# Local SQLite database
+web/db.sqlite3
+
 # IDE / OS
 .idea/
 .vscode/

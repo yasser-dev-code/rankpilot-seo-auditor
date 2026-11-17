@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ t.res_title }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h1>{{ t.res_title }}</h1>
+    <p class="mono">{{ analysis.url }}</p>
+  </div>
+
+  {% if not analysis.succeeded %}
+    <div class="card">
+      <h2 class="card-title">{{ t.res_error_title }}</h2>
+      <p class="check-details">{{ error_message }}</p>
+      <p><a class="btn btn-secondary" href="{% url 'reports' %}">{{ t.res_back_reports }}</a></p>
+    </div>
+  {% else %}
+    <div class="card">
+      <div class="score-panel">
+        <div class="score-ring" style="--score: {{ analysis.score|default:0 }}">
+          <div class="score-ring-inner">
+            <div>
+              <div class="score-number">{{ analysis.score|default:0 }}</div>
+              <div class="score-max">/ 100</div>
+            </div>
+          </div>
+        </div>
+        <div class="score-meta">
+          <h2 class="card-title">{{ t.res_score }}</h2>
+          <p class="card-sub">{{ t.score_explain }}</p>
+          <div class="chips">
+            <span class="chip"><b>{{ analysis.passed }}</b>{{ t.res_passed }}</span>
+            <span class="chip"><b>{{ analysis.failed }}</b>{{ t.res_failed }}</span>
+            <span class="chip"><b>{{ analysis.warnings }}</b>{{ t.res_warnings }}</span>
+            <span class="chip"><b>{{ analysis.issues }}</b>{{ t.res_issues }}</span>
+          </div>
+          <div class="detected">
+            <div class="detected-row">
+              <span class="detected-label">{{ t.res_domain }}</span>
+              <span class="detected-value mono">{{ analysis.domain }}</span>
+            </div>
+            <div class="detected-row">
+              <span class="detected-label">{{ t.res_date }}</span>
+              <span class="detected-value">{{ analysis.created_at|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            <div class="detected-row">
+              <span class="detected-label">{{ t.lbl_title }}</span>
+              <span class="detected-value {% if not analysis.page_title %}none{% endif %}">{% if analysis.page_title %}{{ analysis.page_title }}{% else %}{{ t.res_none }}{% endif %}</span>
+            </div>
+            <div class="detected-row">
+              <span class="detected-label">{{ t.lbl_meta }}</span>
+              <span class="detected-value {% if not analysis.meta_description %}none{% endif %}">{% if analysis.meta_description %}{{ analysis.meta_description }}{% else %}{{ t.res_none }}{% endif %}</span>
+            </div>
+            <div class="detected-row">
+              <span class="detected-label">{{ t.lbl_h1 }}</span>
+              <span class="detected-value {% if not analysis.h1 %}none{% endif %}">{% if analysis.h1 %}{{ analysis.h1 }}{% else %}{{ t.res_none }}{% endif %}</span>
+            </div>
+          </div>
+        </div>
+        <div style="width: 240px;">
+          <h3 class="card-title">{{ t.chart_title }}</h3>
+          <canvas id="outcomesChart" height="200"
+                  data-passed="{{ analysis.passed }}"
+                  data-failed="{{ analysis.failed }}"
+                  data-warn="{{ analysis.warnings }}"
+                  data-passed-label="{{ t.chart_passed }}"
+                  data-failed-label="{{ t.chart_failed }}"
+                  data-warn-label="{{ t.chart_warn }}"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">{{ t.res_checks }}</h2>
+      <div class="checks-grid">
+        {% for check in checks %}
+          <div class="card check-card {{ check.status|lower }}">
+            <div class="check-head">
+              <span class="check-name">{{ check.name }}</span>
+              <span class="badge badge-{{ check.status|lower }}">{{ check.status_label }}</span>
+            </div>
+            <div class="check-details">{{ check.details }}</div>
+            {% for row in check.extra_rows %}
+              <div class="check-extra">- {{ row.url }} -&gt; {{ row.status }}</div>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">{{ t.res_broken }}</h2>
+      {% if analysis.broken_links %}
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr><th>{{ t.col_url }}</th><th>{{ t.col_http }}</th></tr>
+            </thead>
+            <tbody>
+              {% for link in analysis.broken_links %}
+                <tr>
+                  <td class="mono">{{ link.url }}</td>
+                  <td><span class="badge badge-fail">{{ link.status }}</span></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="check-details">{{ t.res_broken_none }}</p>
+      {% endif %}
+    </div>
+
+    <p>
+      <a class="btn" href="{% url 'report_csv' analysis.pk %}">
+        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
+        {{ t.res_download }}
+      </a>
+      <a class="btn btn-secondary" href="{% url 'reports' %}">{{ t.res_back_reports }}</a>
+    </p>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}

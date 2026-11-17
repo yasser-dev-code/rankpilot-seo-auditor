@@ -28,32 +28,37 @@ def build_report_path(url: str, analyzed_at: datetime, reports_dir: str = "repor
     return directory / f"seo-report-{hostname}-{timestamp}.csv"
 
 
-def write_csv_report(audit: AuditResult, path: Path, translator: Translator) -> Path:
-    """Write the full CSV report for a successful audit and return its path."""
+def csv_rows(audit: AuditResult, translator: Translator) -> list[list[str]]:
+    """Build all CSV rows (header + one row per check + broken-link rows)."""
     date_text = audit.analyzed_at.strftime("%Y-%m-%d %H:%M:%S")
+    rows = [[translator.t(key) for key in CSV_HEADER_KEYS]]
 
-    with open(path, "w", newline="", encoding="utf-8-sig") as handle:
-        writer = csv.writer(handle)
-        writer.writerow([translator.t(key) for key in CSV_HEADER_KEYS])
-
-        for result in audit.results:
-            writer.writerow([
+    for result in audit.results:
+        rows.append([
+            audit.url,
+            date_text,
+            translator.t(result.check_key),
+            translator.status_label(result.status),
+            result.localized_details(translator),
+            "",
+            result.http_status,
+        ])
+        for row in result.extra_rows:
+            rows.append([
                 audit.url,
                 date_text,
-                translator.t(result.check_key),
-                translator.status_label(result.status),
-                result.details,
-                "",
-                result.http_status,
+                translator.t(row.check_key or result.check_key),
+                translator.status_label(row.status),
+                row.details,
+                row.related_url,
+                row.http_status,
             ])
-            for row in result.extra_rows:
-                writer.writerow([
-                    audit.url,
-                    date_text,
-                    translator.t(row.check_key or result.check_key),
-                    translator.status_label(row.status),
-                    row.details,
-                    row.related_url,
-                    row.http_status,
-                ])
+    return rows
+
+
+def write_csv_report(audit: AuditResult, path: Path, translator: Translator) -> Path:
+    """Write the full CSV report for a successful audit and return its path."""
+    with open(path, "w", newline="", encoding="utf-8-sig") as handle:
+        writer = csv.writer(handle)
+        writer.writerows(csv_rows(audit, translator))
     return path

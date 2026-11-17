@@ -10,16 +10,19 @@ from rankpilot.reporter import build_report_path, write_csv_report
 
 
 def make_audit(url="https://example.com"):
+    translator = Translator("en")
     audit = AuditResult(url=url, analyzed_at=datetime(2026, 11, 16, 23, 5, 12),
                         http_status=200)
     audit.results = [
-        CheckResult("check_title", PASS, 'Title found: "Example"'),
-        CheckResult("check_links", FAIL, "1 broken internal link(s) out of 2 checked.",
+        CheckResult("check_title", PASS, "title_ok", {"value": "Example"},
+                    translator=translator),
+        CheckResult("check_links", FAIL, "links_broken", {"broken": 1, "count": 2},
                     extra_rows=[ExtraRow(status=FAIL,
                                          details="https://example.com/gone -> 404",
                                          related_url="https://example.com/gone",
                                          http_status="404",
-                                         check_key="csv_broken_link")]),
+                                         check_key="csv_broken_link")],
+                    translator=translator),
     ]
     return audit
 

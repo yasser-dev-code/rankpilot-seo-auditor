@@ -3,7 +3,11 @@
 Each check function receives what it needs (parsed HTML, or site-level
 data already fetched by the analyzer) plus a Translator, and returns a
 CheckResult. Checks never raise for expected content problems; they
-report PASS / FAIL / WARN with localized details.
+report PASS / FAIL / WARN.
+
+Results store a translation key and parameters instead of a fixed
+string, so the same analysis can be rendered in any supported language
+(terminal, CSV or web interface).
 """
 
 from __future__ import annotations
@@ -31,14 +35,34 @@ class ExtraRow:
 
 @dataclass
 class CheckResult:
-    """Outcome of a single SEO check."""
+    """Outcome of a single SEO check.
+
+    ``detail_key`` / ``detail_params`` describe the result in a
+    language-neutral way; ``details`` renders them with the translator
+    used during the analysis, while ``localized_details`` can render the
+    same result in another language.
+    """
 
     check_key: str          # i18n key of the check name (e.g. "check_title")
     status: str             # PASS, FAIL or WARN
-    details: str            # localized human-readable details
+    detail_key: str         # i18n key of the explanation
+    detail_params: dict = field(default_factory=dict)
     counted: bool = True    # False for informational rows (page load)
     http_status: str = ""   # HTTP status of the analyzed page, when relevant
+    truncated: bool = False # link list was capped at ``limit``
+    limit: int = 0
     extra_rows: list = field(default_factory=list)
+    translator: Optional[Translator] = field(default=None, repr=False, compare=False)
+
+    @property
+    def details(self) -> str:
+        return self.localized_details(self.translator or Translator())
+
+    def localized_details(self, translator: Translator) -> str:
+        text = translator.t(self.detail_key, **self.detail_params)
+        if self.truncated:
+            text += translator.t("links_truncated", limit=self.limit)
+        return text
 
 
 def _clean_text(value: Optional[str]) -> str:
@@ -49,22 +73,22 @@ def check_title(soup: BeautifulSoup, t: Translator) -> CheckResult:
     """Check 1 — the page must have a non-empty <title> tag."""
     title_tag = soup.find("title")
     if title_tag is None:
-        return CheckResult("check_title", FAIL, t.t("title_missing"))
+        return CheckResult("check_title", FAIL, "title_missing", translator=t)
     title = _clean_text(title_tag.get_text())
     if not title:
-        return CheckResult("check_title", FAIL, t.t("title_empty"))
-    return CheckResult("check_title", PASS, t.t("title_ok", value=title))
+        return CheckResult("check_title", FAIL, "title_empty", translator=t)
+    return CheckResult("check_title", PASS, "title_ok", {"value": title}, translator=t)
 
 
 def check_meta_description(soup: BeautifulSoup, t: Translator) -> CheckResult:
     """Check 2 — the page must have a non-empty meta description."""
     meta = soup.find("meta", attrs={"name": lambda v: v and v.lower() == "description"})
     if meta is None:
-        return CheckResult("check_meta", FAIL, t.t("meta_missing"))
+        return CheckResult("check_meta", FAIL, "meta_missing", translator=t)
     description = _clean_text(meta.get("content"))
     if not description:
-        return CheckResult("check_meta", FAIL, t.t("meta_empty"))
-    return CheckResult("check_meta", PASS, t.t("meta_ok", value=description))
+        return CheckResult("check_meta", FAIL, "meta_empty", translator=t)
+    return CheckResult("check_meta", PASS, "meta_ok", {"value": description}, translator=t)
 
 
 def check_h1(soup: BeautifulSoup, t: Translator) -> CheckResult:
@@ -74,11 +98,12 @@ def check_h1(soup: BeautifulSoup, t: Translator) -> CheckResult:
     """
     headings = soup.find_all("h1")
     if not headings:
-        return CheckResult("check_h1", FAIL, t.t("h1_missing"))
+        return CheckResult("check_h1", FAIL, "h1_missing", translator=t)
     first = _clean_text(headings[0].get_text())
     if len(headings) == 1:
-        return CheckResult("check_h1", PASS, t.t("h1_ok", value=first))
-    return CheckResult("check_h1", WARN, t.t("h1_multiple", count=len(headings), first=first))
+        return CheckResult("check_h1", PASS, "h1_ok", {"value": first}, translator=t)
+    return CheckResult("check_h1", WARN, "h1_multiple",
+                       {"count": len(headings), "first": first}, translator=t)
 
 
 def check_images(soup: BeautifulSoup, t: Translator) -> CheckResult:
@@ -90,27 +115,22 @@ def check_images(soup: BeautifulSoup, t: Translator) -> CheckResult:
     images = soup.find_all("img")
     total = len(images)
     if total == 0:
-        return CheckResult("check_images", PASS, t.t("images_none"))
+        return CheckResult("check_images", PASS, "images_none", translator=t)
 
     missing = [img for img in images if not img.has_attr("alt")]
     empty = [img for img in images if img.has_attr("alt") and not img["alt"].strip()]
 
     if not missing and not empty:
-        return CheckResult("check_images", PASS, t.t("images_ok", total=total))
+        return CheckResult("check_images", PASS, "images_ok", {"total": total}, translator=t)
     if missing and empty:
-        return CheckResult(
-            "check_images", FAIL,
-            t.t("images_both", missing=len(missing), total=total, empty=len(empty)),
-        )
+        return CheckResult("check_images", FAIL, "images_both",
+                           {"missing": len(missing), "total": total, "empty": len(empty)},
+                           translator=t)
     if missing:
-        return CheckResult(
-            "check_images", FAIL,
-            t.t("images_missing_only", missing=len(missing), total=total),
-        )
-    return CheckResult(
-        "check_images", WARN,
-        t.t("images_empty_only", empty=len(empty), total=total),
-    )
+        return CheckResult("check_images", FAIL, "images_missing_only",
+                           {"missing": len(missing), "total": total}, translator=t)
+    return CheckResult("check_images", WARN, "images_empty_only",
+                       {"empty": len(empty), "total": total}, translator=t)
 
 
 def check_sitemap(session: requests.Session, url: str, robots_text: Optional[str],
@@ -122,22 +142,24 @@ def check_sitemap(session: requests.Session, url: str, robots_text: Optional[str
             if line.strip().lower().startswith("sitemap:"):
                 sitemap_url = line.split(":", 1)[1].strip()
                 if sitemap_url and _url_reachable(session, sitemap_url, timeout):
-                    return CheckResult("check_sitemap", PASS, t.t("sitemap_robots", url=sitemap_url))
+                    return CheckResult("check_sitemap", PASS, "sitemap_robots",
+                                       {"url": sitemap_url}, translator=t)
 
     # 2. Standard location
     default_url = f"{site_origin(url)}/sitemap.xml"
     if _url_reachable(session, default_url, timeout):
-        return CheckResult("check_sitemap", PASS, t.t("sitemap_default", url=default_url))
+        return CheckResult("check_sitemap", PASS, "sitemap_default",
+                           {"url": default_url}, translator=t)
 
-    return CheckResult("check_sitemap", WARN, t.t("sitemap_missing"))
+    return CheckResult("check_sitemap", WARN, "sitemap_missing", translator=t)
 
 
 def check_robots(robots_text: Optional[str], url: str, t: Translator) -> CheckResult:
     """Check 7 — the website should expose a robots.txt file at its root."""
     robots_url = f"{site_origin(url)}/robots.txt"
     if robots_text is not None:
-        return CheckResult("check_robots", PASS, t.t("robots_ok", url=robots_url))
-    return CheckResult("check_robots", WARN, t.t("robots_missing"))
+        return CheckResult("check_robots", PASS, "robots_ok", {"url": robots_url}, translator=t)
+    return CheckResult("check_robots", WARN, "robots_missing", translator=t)
 
 
 def _url_reachable(session: requests.Session, url: str, timeout: int) -> bool:

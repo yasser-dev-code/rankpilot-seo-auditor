@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ t.ana_title }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h1>{{ t.ana_title }}</h1>
+    <p>{{ t.ana_subtitle }}</p>
+  </div>
+
+  <div class="card" style="max-width: 720px;">
+    <form id="analyzeForm" method="post" action="{% url 'analyzer' %}">
+      {% csrf_token %}
+      <div class="field">
+        <label for="url">{{ t.ana_label }}</label>
+        <input id="url" type="url" name="url" required
+               placeholder="{{ t.ana_placeholder }}"
+               value="{{ request.POST.url|default:'' }}">
+      </div>
+      <p class="hint">{{ t.ana_help }}</p>
+      <p class="hint">{{ t.ana_checks_note }}</p>
+      <button class="btn" type="submit">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
+        {{ t.btn_analyze }}
+      </button>
+    </form>
+  </div>
+
+  <div class="overlay" id="loadingOverlay" role="status" aria-live="polite">
+    <div class="overlay-box">
+      <div class="spinner"></div>
+      <div>{{ t.loading_message }}</div>
+    </div>
+  </div>
+{% endblock %}

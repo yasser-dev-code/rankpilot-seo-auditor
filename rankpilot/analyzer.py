@@ -50,17 +50,18 @@ def _links_check(session: requests.Session, soup: BeautifulSoup, url: str,
     """Run the internal-links check and attach one CSV row per broken link."""
     links = extract_internal_links(soup, url)
     if not links:
-        return checks.CheckResult("check_links", PASS, t.t("links_none"))
+        return checks.CheckResult("check_links", PASS, "links_none", translator=t)
 
     results, truncated = check_internal_links(session, links, timeout)
     broken = [r for r in results if not r.ok]
 
-    details = t.t("links_broken", broken=len(broken), count=len(results)) if broken \
-        else t.t("links_ok", count=len(results))
-    if truncated:
-        details += t.t("links_truncated", limit=len(results))
+    if broken:
+        detail_key, params = "links_broken", {"broken": len(broken), "count": len(results)}
+        status = "FAIL"
+    else:
+        detail_key, params = "links_ok", {"count": len(results)}
+        status = PASS
 
-    status = "FAIL" if broken else PASS
     extra_rows = [
         checks.ExtraRow(status="FAIL",
                         details=t.t("link_broken_item", url=r.url, status=r.status),
@@ -69,7 +70,9 @@ def _links_check(session: requests.Session, soup: BeautifulSoup, url: str,
                         check_key="csv_broken_link")
         for r in broken
     ]
-    return checks.CheckResult("check_links", status, details, extra_rows=extra_rows)
+    return checks.CheckResult("check_links", status, detail_key, params,
+                              truncated=truncated, limit=len(results),
+                              extra_rows=extra_rows, translator=t)
 
 
 def analyze(url: str, translator: Translator,
@@ -98,10 +101,10 @@ def analyze(url: str, translator: Translator,
 
     # Informational (non-counted) row about the page download itself.
     audit.results.append(checks.CheckResult(
-        "check_page", PASS,
-        translator.t("page_ok", status=response.status_code),
+        "check_page", PASS, "page_ok", {"status": response.status_code},
         counted=False,
         http_status=str(response.status_code),
+        translator=translator,
     ))
 
     soup = BeautifulSoup(response.text, "html.parser")
