@@ -28,6 +28,7 @@ Le score RankPilot est un indicateur de qualité interne calculé à partir des 
 - **Statistiques du tableau de bord** calculées uniquement à partir des analyses enregistrées (sites analysés, score moyen, problèmes détectés, analyses réussies).
 - **Protection SSRF** : les adresses privées, loopback, link-local et réservées sont rejetées, les résolutions DNS sont validées avant connexion, chaque saut de redirection est re-validé, et les réponses sont limitées en taille et en durée.
 - **Interface web professionnelle et responsive** : design system navy/bleu, navigation latérale, cartes de statistiques, visualisation circulaire du score et graphique Chart.js.
+- **Favicon RankPilot original** (assets SVG, PNG et ICO) assorti à la charte navy/bleue, référencé sur toutes les pages.
 - **Suite de tests** : 81 tests automatisés (56 pour le moteur SEO et la CLI, 25 pour l'application Django), tous exécutés hors ligne avec HTTP simulé.
 
 ## Technologies
@@ -104,7 +105,7 @@ Ouvrir ensuite <http://127.0.0.1:8000/> dans le navigateur.
 2. **Analyser un site** (`/analyze/`) — saisir une URL complète `http://` ou `https://` puis valider. Le moteur SEO Python existant exécute l'audit, le résultat est enregistré, puis vous êtes redirigé vers la page de résultats.
 3. **Résultats** (`/results/<id>/`) — anneau de score sur 100, compteurs succès/échecs/avertissements, titre de page, méta-description et H1 détectés, une carte par contrôle avec son statut et son explication, tableau des liens cassés et bouton **Télécharger le rapport CSV**.
 4. **Rapports** (`/reports/`) — historique paginé de toutes les analyses avec date, score, statut, lien vers les résultats complets et téléchargement CSV.
-5. **Changement de langue** — le bouton en haut de page bascule anglais ⇄ français pour toute la session ; les analyses enregistrées sont réaffichées dans la langue active.
+5. **Sélecteur de langue** — le contrôle EN | FR en haut de page met en évidence la langue active ; un clic sur l'autre code bascule toute la session instantanément, et les analyses enregistrées sont réaffichées dans la langue active sans relancer l'audit.
 6. **À propos de RankPilot** (`/about/`) — règles de score, notes de sécurité et informations de version.
 
 ## Utiliser la CLI

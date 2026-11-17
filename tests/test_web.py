@@ -4,10 +4,12 @@ External HTTP traffic is never performed: the engine call is replaced by
 a prepared AuditResult, and SSRF tests use literal / mocked DNS answers.
 """
 
+import re
 from datetime import datetime
 
 import pytest
 import requests
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import Client
 from django.urls import reverse
 
@@ -303,3 +305,129 @@ def test_csrf_protection_is_enforced():
 def test_analyzer_rejects_get_submission(client):
     response = client.delete(reverse("analyzer"))
     assert response.status_code == 405
+
+
+# --- Language selector correctness -------------------------------------------
+
+def _switch(client, lang):
+    return client.get(reverse("set_language"), {"lang": lang, "next": "/"})
+
+
+def _lang_options(html):
+    """Map language code -> (class attribute, aria-current) of each selector option."""
+    matches = re.findall(
+        r'class="lang-option([^"]*)" aria-current="(\w+)" href="[^"]*lang=(\w{2})', html)
+    return {lang: (classes, current) for classes, current, lang in matches}
+
+
+def test_selecting_english_shows_english_on_every_page(client, mock_engine):
+    submit(client, "https://example.com")
+    analysis = Analysis.objects.get()
+    _switch(client, "en")
+
+    dash = client.get(reverse("dashboard")).content
+    ana = client.get(reverse("analyzer")).content
+    rep = client.get(reverse("reports")).content
+    res = client.get(reverse("results", kwargs={"pk": analysis.pk})).content
+    about = client.get(reverse("about")).content
+
+    assert b"Dashboard" in dash and b"Websites Analyzed" in dash
+    assert b"Analyze a Website" in ana and b"Website URL" in ana
+    assert b"History of your SEO analyses" in rep
+    assert b"SEO Analysis Results" in res and b"Individual Checks" in res
+    assert b"About RankPilot" in about
+    assert "Tableau de bord".encode() not in dash
+
+
+def test_selecting_french_shows_french_on_every_page(client, mock_engine):
+    submit(client, "https://example.com")
+    analysis = Analysis.objects.get()
+    _switch(client, "fr")
+
+    dash = client.get(reverse("dashboard")).content
+    ana = client.get(reverse("analyzer")).content
+    rep = client.get(reverse("reports")).content
+    res = client.get(reverse("results", kwargs={"pk": analysis.pk})).content
+    about = client.get(reverse("about")).content
+
+    assert "Tableau de bord".encode() in dash and "Sites web analysés".encode() in dash
+    assert "Analyser un site web".encode() in ana and "URL du site web".encode() in ana
+    assert "Historique de vos analyses SEO".encode() in rep
+    assert "Résultats de l".encode() in res and "analyse SEO".encode() in res
+    assert "Contrôles détaillés".encode() in res
+    assert "À propos de RankPilot".encode() in about
+    assert b"Dashboard" not in dash and b"Websites Analyzed" not in dash
+
+
+def test_selector_highlights_the_active_language(client):
+    options = _lang_options(client.get(reverse("dashboard")).content.decode())
+    assert "active" in options["en"][0] and options["en"][1] == "true"
+    assert "active" not in options["fr"][0] and options["fr"][1] == "false"
+
+    _switch(client, "fr")
+    options = _lang_options(client.get(reverse("dashboard")).content.decode())
+    assert "active" in options["fr"][0] and options["fr"][1] == "true"
+    assert "active" not in options["en"][0] and options["en"][1] == "false"
+
+
+def test_french_persists_across_navigation_and_submission(client, mock_engine):
+    _switch(client, "fr")
+    assert "Tableau de bord".encode() in client.get(reverse("dashboard")).content
+
+    response = submit(client, "https://example.com")
+    analysis = Analysis.objects.get()
+    results = client.get(response["Location"]).content
+    assert "Résultats de l".encode() in results and "analyse SEO".encode() in results
+
+    reports = client.get(reverse("reports")).content
+    assert "Rapports".encode() in reports and "Terminée".encode() in reports
+    assert client.session["rankpilot_lang"] == "fr"
+
+
+def test_results_switch_language_without_rerunning_analysis(client, mock_engine, monkeypatch):
+    submit(client, "https://example.com")
+    analysis = Analysis.objects.get()
+
+    calls = {"count": 0}
+    original = services.analyze
+
+    def counting_analyze(url, translator, session=None):
+        calls["count"] += 1
+        return original(url, translator, session=session)
+
+    monkeypatch.setattr(services, "analyze", counting_analyze)
+
+    english = client.get(reverse("results", kwargs={"pk": analysis.pk})).content
+    assert b"Individual Checks" in english
+
+    _switch(client, "fr")
+    french = client.get(reverse("results", kwargs={"pk": analysis.pk})).content
+    assert "Contrôles détaillés".encode() in french and "Méta-description".encode() in french
+    assert calls["count"] == 0
+
+
+# --- Favicon ------------------------------------------------------------------
+
+def test_templates_reference_favicon_assets(client):
+    for url in (reverse("dashboard"), reverse("analyzer"), reverse("reports"),
+                reverse("about")):
+        html = client.get(url).content.decode()
+        for asset in ("favicons/favicon.svg", "favicons/favicon-32x32.png",
+                      "favicons/favicon-16x16.png", "favicons/favicon.ico",
+                      "favicons/apple-touch-icon.png"):
+            assert asset in html
+
+
+class FaviconServingTests(StaticLiveServerTestCase):
+    def test_favicon_files_are_served(self):
+        import urllib.request
+
+        for path, prefix in (("static/favicons/favicon.svg", b"<svg"),
+                             ("static/favicons/favicon-32x32.png", b"\x89PNG"),
+                             ("static/favicons/favicon-16x16.png", b"\x89PNG"),
+                             ("static/favicons/favicon.ico", b"\x00\x00"),
+                             ("static/favicons/apple-touch-icon.png", b"\x89PNG")):
+            with urllib.request.urlopen(f"{self.live_server_url}/{path}") as response:
+                body = response.read()
+            assert response.status == 200
+            assert body.startswith(prefix)

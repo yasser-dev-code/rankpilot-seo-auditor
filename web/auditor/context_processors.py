@@ -16,6 +16,4 @@ def i18n(request):
     return {
         "t": translator,
         "lang": lang,
-        "other_lang": "fr" if lang == "en" else "en",
-        "other_lang_label": translator.t("lang_other_label"),
     }

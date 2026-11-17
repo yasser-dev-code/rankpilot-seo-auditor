@@ -28,6 +28,7 @@ The RankPilot score is an internal quality indicator computed from the checks be
 - **Dashboard statistics** computed from stored analyses only (websites analyzed, average score, issues detected, successful analyses).
 - **SSRF-hardened fetching**: private, loopback, link-local and reserved addresses are rejected, DNS results are validated before connecting, every redirect hop is re-validated, and responses are size-capped and time-limited.
 - **Professional responsive web UI**: navy/blue design system, sidebar navigation, statistic cards, circular score visualization and a Chart.js outcome chart.
+- **Original RankPilot favicon** (SVG, PNG and ICO assets) matching the navy-and-blue brand, referenced on every page.
 - **Test suite**: 81 automated tests (56 for the SEO engine and CLI, 25 for the Django application), all running offline with mocked HTTP.
 
 ## Technologies
@@ -104,7 +105,7 @@ Then open <http://127.0.0.1:8000/> in your browser.
 2. **Analyze Website** (`/analyze/`) — enter a full `http://` or `https://` URL and submit. The existing Python SEO engine runs the audit, the result is stored, and you are redirected to the results page.
 3. **Results** (`/results/<id>/`) — score ring out of 100, passed/failed/warning counters, detected page title, meta description and H1, one card per check with its status and explanation, a broken-links table and a **Download CSV report** button.
 4. **Reports** (`/reports/`) — paginated history of every analysis with date, score, status, a link to the full results and a CSV download.
-5. **Language switch** — the button in the top bar toggles English ⇄ French for the whole session; stored analyses are re-rendered in the active language.
+5. **Language selector** — the EN | FR control in the top bar highlights the active language; clicking the other code switches the whole session instantly, and stored analyses are re-rendered in the active language without re-running the audit.
 6. **About RankPilot** (`/about/`) — scoring rules, security notes and version information.
 
 ## Using the CLI
